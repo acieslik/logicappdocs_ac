@@ -41,7 +41,7 @@ $WarningPreference = 'SilentlyContinue'
                                                                                                                                                          
 Author: Stefan Stranger
 Github: https://github.com/stefanstranger/logicappdocs
-Version: 1.1.0
+Version: 1.1.2
 
 "@.foreach({
         Write-Host $_ -ForegroundColor Magenta
@@ -193,8 +193,15 @@ $objects | Group-Object -Property Parent | ForEach-Object {
 foreach ($object in $objects) {
     if ($object | Get-Member -MemberType NoteProperty -Name 'RunAfter') {
         # Check if the runafter property is not empty
-        if (![string]::IsNullOrEmpty($object.RunAfter)) {
-            $mermaidCode += "    $($object.RunAfter) --> $($object.ActionName)" + [Environment]::NewLine
+        if (![string]::IsNullOrEmpty($object.RunAfter)) { 
+            if (($object.runAfter | Measure-Object).count -eq 1) {
+                $mermaidCode += "    $($object.RunAfter) --> $($object.ActionName)" + [Environment]::NewLine
+            }
+            else {
+                foreach ($runAfter in $object.RunAfter) {
+                    $mermaidCode += "    $runAfter --> $($object.ActionName)" + [Environment]::NewLine
+                }
+            }
         }
     }        
 }
@@ -226,6 +233,15 @@ $InputObject = [pscustomobject]@{
 
 $options = New-PSDocumentOption -Option @{ 'Markdown.UseEdgePipes' = 'Always'; 'Markdown.ColumnPadding' = 'Single' };
 $null = [PSDocs.Configuration.PSDocumentOption]$Options
-$markDownFile = Invoke-PSDocument -Path $templatePath -Name $templateName -InputObject $InputObject -Culture 'en-us' -Option $options -OutputPath $OutputPath -InstanceName $LogicAppName
+$invokePSDocumentSplat = @{
+    Path         = $templatePath
+    Name         = $templateName
+    InputObject  = $InputObject
+    Culture      = 'en-us'
+    Option       = $options
+    OutputPath   = $OutputPath
+    InstanceName = $LogicAppName
+}
+$markDownFile = Invoke-PSDocument @invokePSDocumentSplat
 Write-Host ('Logic App Workflow Markdown document is being created at {0}' -f $($markDownFile.FullName)) -ForegroundColor Green
 #endregion
